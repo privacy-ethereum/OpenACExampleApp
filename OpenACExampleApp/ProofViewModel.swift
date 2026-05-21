@@ -99,6 +99,8 @@ final class ProofViewModel {
     let fm = FileManager.default
     try fm.createDirectory(at: workDir, withIntermediateDirectories: true)
 
+    cleanupCircuitFiles()
+
     // For simulator testing
     // Copy bundled input.json on first launch.
     if let src = Bundle.main.path(forResource: "input", ofType: "json") {
@@ -303,7 +305,7 @@ final class ProofViewModel {
       guard let appIdBytes = json["app_id"] as? String,
             let challengeString = json["challenge"] as? String else {
         challengeExpiresAt = nil
-        tbsStatus = .failure("Server error")
+        tbsStatus = .failure(L10n.tr("vm.server_error"))
         return
       }
       tbs = appIdBytes
@@ -317,7 +319,7 @@ final class ProofViewModel {
       tbsStatus = .success("challenge received")
     } catch {
       challengeExpiresAt = nil
-      tbsStatus = .failure("Server error")
+      tbsStatus = .failure(L10n.tr("vm.server_error"))
       print("regenerateTBS error: \(error)")
     }
   }
@@ -341,7 +343,7 @@ final class ProofViewModel {
           idNum: idNum,
           opCode: "SIGN",
           opMode: "APP2APP",
-          hint: "待簽署資料",
+          hint: L10n.tr("vm.hint_sign_data"),
           timeLimit: "600",
           signData: Data(tbs.utf8).base64EncodedString(),
           signType: "PKCS#1",
@@ -363,12 +365,12 @@ final class ProofViewModel {
         spTicketStatus = .success("ticket received")
       } else if let errMsg = json["error_message"] as? String, !errMsg.isEmpty {
         if errMsg.contains("input id number not found in database") {
-          spTicketStatus = .failure("ID not found in database")
+          spTicketStatus = .failure(L10n.tr("vm.id_not_found"))
         } else {
           spTicketStatus = .failure(errMsg)
         }
       } else if let errCode = json["error_code"] as? String, !errCode.isEmpty {
-        spTicketStatus = .failure(errCode)
+        spTicketStatus = .failure(moicaUserMessage(from: errCode) ?? errCode)
       } else {
         spTicketStatus = .failure("sp_ticket not found in response: \(raw)")
       }
@@ -477,7 +479,7 @@ final class ProofViewModel {
     isRunning = true
 
     if isChallengeExpired {
-      let msg = "Challenge expired, please refresh"
+      let msg = L10n.tr("vm.verify_challenge_expired")
       verifyStatus = .failure(msg)
       flowStep = .failure(msg)
       isRunning = false
@@ -486,20 +488,20 @@ final class ProofViewModel {
 
     await runGenerateInput()
     guard generateInputStatus.isSuccess else {
-      flowStep = .failure(generateInputStatus.errorMessage ?? "Failed to prepare input")
+      flowStep = .failure(generateInputStatus.errorMessage ?? L10n.tr("vm.prepare_input_failed"))
       isRunning = false
       return
     }
 
     await _runProve()
     guard proveStatus.isSuccess else {
-      flowStep = .failure(proveStatus.errorMessage ?? "Prove failed")
+      flowStep = .failure(proveStatus.errorMessage ?? L10n.tr("vm.prove_failed"))
       isRunning = false
       return
     }
 
     if isChallengeExpired {
-      let msg = "Challenge expired, please refresh"
+      let msg = L10n.tr("vm.verify_challenge_expired")
       verifyStatus = .failure(msg)
       flowStep = .failure(msg)
       isRunning = false
@@ -513,7 +515,7 @@ final class ProofViewModel {
       totalVerificationSeconds = verificationStartTime.map { Date().timeIntervalSince($0) }
       flowStep = .success
     } else {
-      flowStep = .failure(verifyStatus.errorMessage ?? "Verify failed")
+      flowStep = .failure(verifyStatus.errorMessage ?? L10n.tr("vm.verify_failed"))
     }
     isRunning = false
   }
@@ -530,7 +532,7 @@ final class ProofViewModel {
     }
 
     guard !isChallengeExpired else {
-      verifyStatus = .failure("Challenge expired, please refresh")
+      verifyStatus = .failure(L10n.tr("vm.verify_challenge_expired"))
       isRunning = false
       return
     }
@@ -624,7 +626,7 @@ final class ProofViewModel {
 
   private func _runVerify() async {
     if isChallengeExpired {
-      verifyStatus = .failure("Challenge expired, please refresh")
+      verifyStatus = .failure(L10n.tr("vm.verify_challenge_expired"))
       return
     }
 
@@ -678,7 +680,7 @@ final class ProofViewModel {
       }
 
       verifyMilliseconds = Int(Date().timeIntervalSince(verifyStart) * 1000)
-      verifyStatus = .success("All proofs valid")
+      verifyStatus = .success(L10n.tr("vm.verify_ready"))
       cleanupCircuitFiles()
     } catch {
       print("_runVerify error: \(error)")
