@@ -911,13 +911,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "PTT identity verification"
+            "value" : "identity verification"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "PTT身份驗證"
+            "value" : "身份驗證"
           }
         }
       }
